@@ -4,17 +4,17 @@ import java.util.Scanner;
 
 public class HashSimulado {
 
-    public static int generarHash(String palabra) {
-        int semilla = 3;
-        int a = 17;
-        int c = 9;
-        int w = 5;
-        int m = 97;
+    public static long generarHash(String palabra, String sal) {
+        long semilla = 3;
+        long a = 31;
+        long m = 1000000007L;
 
-        int x = semilla;
-        for (int n = 1; n <= palabra.length(); n++) {
-            int valorLetra = (int) palabra.charAt(n - 1);
-            x = (a * x + c + n * w + valorLetra) % m;
+        String palabraCombinada = palabra + sal;
+
+        long x = semilla;
+        for (int n = 1; n <= palabraCombinada.length(); n++) {
+            int valorLetra = (int) palabraCombinada.charAt(n - 1);
+            x = ((a * x) ^ valorLetra) % m; // Se modifico la ecuacion para que fuera mas dificil de adivinar con el XOR
         }
 
         return x;
@@ -26,7 +26,9 @@ public class HashSimulado {
         Scanner palabrasc = new Scanner(System.in);
         String palabraSecreta = palabrasc.nextLine().toUpperCase();
 
-        int hashGenerado = generarHash(palabraSecreta);
+        String sal = "Z9xY";
+
+        long hashGenerado = generarHash(palabraSecreta, sal);
         System.out.println("codigo: " + hashGenerado);
 
         System.out.println("¡Iniciando Ataque de Diccionario!");
@@ -41,7 +43,7 @@ public class HashSimulado {
         boolean encontrado = false;
 
         for (String intento : diccionario) {
-            int hashCalculado = generarHash(intento);
+            long hashCalculado = generarHash(intento, sal);
             System.out.println("Probando: " + intento + " -> Código resultante: " + hashCalculado);
 
             // Si los códigos coinciden, se encontro la palabra
