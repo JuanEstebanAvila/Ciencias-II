@@ -1,62 +1,59 @@
 package Conteo;
 import java.util.Scanner;
+import java.io.PrintStream;
 
-// HashSimulado v3 - Inspirado en SHA-256
-// Salida fija de 64 caracteres hexadecimales = 256 bits
+// ═══════════════════════════════════════════════════════════════════════════
+// HashSimulado - Dos partes en un mismo archivo
+//
+// PARTE 1: Hash de 256 bits (inspirado en SHA-256)
+//          Con un diccionario pequeño es prácticamente imposible
+//          que dos palabras generen el mismo hash.
+//
+// PARTE 2: Hash reducido a 1 carácter hex (4 bits = 16 valores posibles)
+//          Con 9 palabras las colisiones son casi seguras.
+//          Se validan y resuelven con Sondeo Lineal.
+// ═══════════════════════════════════════════════════════════════════════════
 public class HashSimulado {
 
-    // ---------------------------------------------------------------
-    // CONSTANTES DE RONDA
-    // Inspirado en SHA-256: basadas en raíces cuadradas de primos.
-    // Se mezclan con el estado en cada iteración para dificultar
-    // patrones predecibles en la salida.
-    // ---------------------------------------------------------------
+    // ── Constantes de ronda (inspirado en SHA-256) ───────────────────────
     private static final long[] CONSTANTES = {
-        0x428a2f98d728ae22L,  // primo 2
-        0x7137449123ef65cdL,  // primo 3
-        0xb5c0fbcfec4d3b2fL,  // primo 5
-        0xe9b5dba58189dbbcL   // primo 7
+        0x428a2f98d728ae22L,
+        0x7137449123ef65cdL,
+        0xb5c0fbcfec4d3b2fL,
+        0xe9b5dba58189dbbcL
     };
 
+    // ════════════════════════════════════════════════════════════════════════
+    // GENERADOR DE HASH COMPLETO - 256 bits
+    // Salida fija: 64 caracteres hexadecimales
+    // Cada carácter hex = 4 bits → 64 × 4 = 256 bits
+    // ════════════════════════════════════════════════════════════════════════
     public static String generarHash(String palabra, String sal) {
         String entrada = palabra + sal;
 
-        // ---------------------------------------------------------------
-        // ESTADO INICIAL: 4 bloques de 64 bits = 256 bits en total
-        // Tomados de los valores iniciales reales de SHA-256
-        // (raíces cuadradas de los primeros 4 primos, parte fraccionaria)
-        // ---------------------------------------------------------------
         long[] estado = {
-            0x6a09e667f3bcc908L,  // bloque 0
-            0xbb67ae8584caa73bL,  // bloque 1
-            0x3c6ef372fe94f82bL,  // bloque 2
-            0xa54ff53a5f1d36f1L   // bloque 3
+            0x6a09e667f3bcc908L,
+            0xbb67ae8584caa73bL,
+            0x3c6ef372fe94f82bL,
+            0xa54ff53a5f1d36f1L
         };
 
-        // ---------------------------------------------------------------
-        // RONDA 1: procesar cada carácter de la entrada
-        // ---------------------------------------------------------------
+        // Ronda 1: procesar cada carácter
         for (int i = 0; i < entrada.length(); i++) {
-            int ascii = entrada.charAt(i); // V1: valor ASCII directo (sin pérdida de info)
-            int b = i % 4;                 // cada carácter afecta un bloque distinto
+            int ascii = entrada.charAt(i);
+            int b     = i % 4;
 
-            // -- Mezcla del bloque actual (V1 + V2) --
-            estado[b] = (estado[b] * 131L) ^ ascii;          // multiplicación + XOR con ASCII  (V1+V2)
-            estado[b] = Long.rotateLeft(estado[b], 5);        // rotación de bits                (V2)
-            estado[b] ^= (estado[b] >>> 7);                   // segunda mezcla con shift        (V2)
-            estado[b] ^= CONSTANTES[b];                       // XOR con constante de ronda      (NUEVO)
+            estado[b] = (estado[b] * 131L) ^ ascii;
+            estado[b] = Long.rotateLeft(estado[b], 5);
+            estado[b] ^= (estado[b] >>> 7);
+            estado[b] ^= CONSTANTES[b];
 
-            // -- Mezcla cruzada entre bloques (NUEVO - inspirado en SHA-256) --
-            // Un cambio en un carácter afecta los 4 bloques: efecto avalancha
             estado[(b + 1) % 4] ^= Long.rotateLeft(estado[b], 13);
             estado[(b + 2) % 4] ^= (estado[b] >>> 17);
             estado[(b + 3) % 4] += estado[b];
         }
 
-        // ---------------------------------------------------------------
-        // RONDA 2: finalización (4 pasadas de mezcla global)
-        // Garantiza avalancha completa incluso en entradas cortas
-        // ---------------------------------------------------------------
+        // Ronda 2: finalización
         for (int r = 0; r < 4; r++) {
             for (int b = 0; b < 4; b++) {
                 estado[b] = Long.rotateLeft(estado[b], 7);
@@ -66,65 +63,187 @@ public class HashSimulado {
             }
         }
 
-        // ---------------------------------------------------------------
-        // SALIDA: 4 bloques × 16 caracteres hex = 64 caracteres SIEMPRE
-        // %016x → hexadecimal, mínimo 16 chars, relleno con ceros
-        // Total: 64 caracteres = 256 bits, longitud fija garantizada
-        // ---------------------------------------------------------------
         return String.format("%016x%016x%016x%016x",
                 estado[0], estado[1], estado[2], estado[3]);
     }
 
-    public static void main(String[] args) {
-        System.out.println("HashSimulado v3 - 256 bits");
+    // ════════════════════════════════════════════════════════════════════════
+    // PARTE 1: Hash 256 bits - sin colisiones en diccionario pequeño
+    // ════════════════════════════════════════════════════════════════════════
+    public static void parte1(String[] diccionario, String sal) {
+        System.out.println("\n╔══════════════════════════════════════════════════════════════════╗");
+        System.out.println("║  PARTE 1 - Hash 256 bits                                  ║");
+        System.out.println("╚══════════════════════════════════════════════════════════════════╝");
+        System.out.println();
+        System.out.println("Espacio de salida: 2^256 valores posibles");
+        System.out.println("Palabras en diccionario: " + diccionario.length);
+        System.out.println("Probabilidad de colisión: prácticamente 0\n");
 
-        System.out.println("Digite la palabra que quiere cifrar:");
-        Scanner palabrasc = new Scanner(System.in);
-        String palabraSecreta = palabrasc.nextLine().toUpperCase();
-        String sal = "Z9xY";
+        System.out.printf("%-15s │ %s%n", "Palabra", "Hash (256 bits - 64 chars)");
+        System.out.println("────────────────┼──────────────────────────────────────────────────────────────────");
 
-        String hashGenerado = generarHash(palabraSecreta, sal);
+        boolean colisionEncontrada = false;
+        String[] hashes = new String[diccionario.length];
 
-        System.out.println("\n── Resultado ──────────────────────────────────────────────────────");
-        System.out.println("Hash (256 bits): " + hashGenerado);
-        System.out.println("Longitud:        " + hashGenerado.length() + " caracteres hexadecimales = 256 bits");
-        System.out.println("───────────────────────────────────────────────────────────────────\n");
-
-        // Demostrar que la longitud es siempre la misma
-        System.out.println("── Verificación de longitud fija ──────────────────────────────────");
-        String[] pruebas = {"A", "HOLA", "PROGRAMACION", "UNATEXTOMUYLARGOPARAPROBAR"};
-        for (String p : pruebas) {
-            String h = generarHash(p, sal);
-            System.out.println("\"" + p + "\" → " + h.length() + " chars → " + h);
+        // Generar y mostrar todos los hashes
+        for (int i = 0; i < diccionario.length; i++) {
+            hashes[i] = generarHash(diccionario[i], sal);
+            System.out.printf("%-15s │ %s%n", diccionario[i], hashes[i]);
         }
-        System.out.println("───────────────────────────────────────────────────────────────────\n");
 
-        System.out.println("¡Iniciando Ataque de Diccionario!");
-        System.out.println("Objetivo:\n" + hashGenerado + "\n");
-
-        String[] diccionario = {
-                "HOLA", "SISTEMAS", "COMPUTACION", "JAVA",
-                "PROGRAMACION", "CIENCIAS", "12345", "ADMIN", "SECRETO"
-        };
-
-        boolean encontrado = false;
-        for (String intento : diccionario) {
-            String hashCalculado = generarHash(intento, sal);
-            System.out.println("Probando: " + intento);
-            System.out.println("          " + hashCalculado);
-
-            if (hashCalculado.equals(hashGenerado)) {
-                System.out.println("\n¡BINGO! SEGURIDAD VULNERADA.");
-                System.out.println("La palabra original es: " + intento);
-                encontrado = true;
-                break;
+        // Validar colisiones comparando todos contra todos
+        System.out.println("\n── Validando colisiones ────────────────────────────────────────────");
+        for (int i = 0; i < hashes.length; i++) {
+            for (int j = i + 1; j < hashes.length; j++) {
+                if (hashes[i].equals(hashes[j])) {
+                    System.out.println("⚠️  COLISIÓN: \"" + diccionario[i] +
+                                       "\" y \"" + diccionario[j] + "\" → " + hashes[i]);
+                    colisionEncontrada = true;
+                }
             }
         }
 
-        if (!encontrado) {
-            System.out.println("\nAtaque fallido. La palabra no estaba en el diccionario del atacante.");
+        if (!colisionEncontrada) {
+            System.out.println(""
+                    + "Sin colisiones. Con 256 bits y " + diccionario.length +
+                               " palabras era de esperarse.");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PARTE 2: Hash reducido a 1 char hex = 16 valores posibles
+    //          Colisiones casi garantizadas → se resuelven con Sondeo Lineal
+    // ════════════════════════════════════════════════════════════════════════
+
+    // 1 char hex = 4 bits = valores del 0 al F = 16 posibles hashes
+    private static final int TAMAÑO_TABLA  = 16;
+    private static String[]  tabla         = new String[TAMAÑO_TABLA]; // palabras
+    private static String[]  tablaHashes   = new String[TAMAÑO_TABLA]; // hashes guardados
+
+    // Toma solo el primer carácter del hash completo
+    public static String generarHashReducido(String palabra, String sal) {
+        return generarHash(palabra, sal).substring(0, 1);
+    }
+
+    // Convierte el 1 char hex a índice de tabla (0-15)
+    public static int hashAIndice(String hashReducido) {
+        return Integer.parseInt(hashReducido, 16);
+    }
+
+    // Inserta con detección de colisión y sondeo lineal
+    public static void insertar(String palabra, String sal) {
+        String hashReducido    = generarHashReducido(palabra, sal);
+        int    indiceOriginal  = hashAIndice(hashReducido);
+        int    indice          = indiceOriginal;
+        int    pasos           = 0;
+
+        System.out.println("\nInsertando: \"" + palabra + "\"");
+        System.out.println("  Hash reducido: " + hashReducido +
+                           " → índice " + indiceOriginal);
+
+        while (tabla[indice] != null) {
+
+            if (tablaHashes[indice].equals(hashReducido)) {
+                // ── COLISIÓN REAL ─────────────────────────────────────────
+                // Dos palabras diferentes generan exactamente el mismo hash
+                System.out.println("  ⚠️  COLISIÓN DETECTADA:");
+                System.out.println("      \"" + palabra + "\" y \"" + tabla[indice] +
+                                   "\" generan el mismo hash → " + hashReducido);
+                System.out.println("      Aplicando sondeo lineal para reubicar...");
+            } else {
+                // ── Posición ocupada por otra colisión previa ─────────────
+                System.out.println("  Posición " + indice +
+                                   " ocupada por \"" + tabla[indice] +
+                                   "\" → avanzando...");
+            }
+
+            // Sondeo lineal: avanzar a la siguiente posición
+            indice = (indice + 1) % TAMAÑO_TABLA;
+            pasos++;
+
+            if (pasos == TAMAÑO_TABLA) {
+                System.out.println("  ❌ Tabla llena. No se pudo insertar \"" + palabra + "\".");
+                return;
+            }
         }
 
-        palabrasc.close();
+        // Posición libre encontrada
+        tabla[indice]       = palabra;
+        tablaHashes[indice] = hashReducido;
+
+        if (pasos > 0) {
+            System.out.println("  Reubicado en posición " + indice +
+                               " (" + pasos + " paso(s) de sondeo)");
+        } else {
+            System.out.println("  Insertado directo en posición " + indice);
+        }
+    }
+
+    // Muestra el estado actual de la tabla
+    public static void mostrarTabla() {
+        System.out.println("\n── Estado de la Tabla (Sondeo Lineal) ─────────────────────────────");
+        System.out.printf("%-4s │ %-13s │ %s%n", "Pos", "Palabra", "Hash reducido");
+        System.out.println("─────┼───────────────┼──────────────");
+        for (int i = 0; i < TAMAÑO_TABLA; i++) {
+            if (tabla[i] != null) {
+                System.out.printf(" %2d  │ %-13s │ %s%n",
+                        i, tabla[i], tablaHashes[i]);
+            } else {
+                System.out.printf(" %2d  │ %-13s │%n", i, "(vacío)");
+            }
+        }
+        System.out.println("────────────────────────────────────────────────────────────────────");
+    }
+
+    public static void parte2(String[] diccionario, String sal) {
+        System.out.println("\n╔══════════════════════════════════════════════════════════════════╗");
+        System.out.println("║  PARTE 2 - Hash 1 char hex: colisiones casi garantizadas  ║");
+        System.out.println("╚══════════════════════════════════════════════════════════════════╝");
+        System.out.println();
+        System.out.println("Espacio de salida: 16 valores posibles (0 a F)");
+        System.out.println("Palabras en diccionario: " + diccionario.length);
+        System.out.println("Con " + diccionario.length +
+                           " palabras en 16 posibles hashes → colisiones esperadas\n");
+
+        // Insertar diccionario en tabla con sondeo lineal
+        System.out.println("── Insertando diccionario ──────────────────────────────────────────");
+        for (String palabra : diccionario) {
+            insertar(palabra, sal);
+        }
+
+        mostrarTabla();
+
+        // Pedir palabra al usuario
+        System.out.println("\n── Ingrese su palabra ──────────────────────────────────────────────");
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Digite una palabra para encriptar e insertar:");
+        String nuevaPalabra = sc.nextLine().toUpperCase();
+
+        // ── Mostrar ambos hashes ──────────────────────────────────────────
+        String hashCompleto = generarHash(nuevaPalabra, sal);
+        String hashNuevo    = generarHashReducido(nuevaPalabra, sal);
+
+        System.out.println("\nHash 256 bits:  " + hashCompleto);
+        System.out.println("Hash reducido:  " + hashNuevo + " (primer carácter del hash completo)");
+
+        insertar(nuevaPalabra, sal);
+        mostrarTabla();
+
+        sc.close();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // MAIN
+    // ════════════════════════════════════════════════════════════════════════
+    public static void main(String[] args) throws Exception {
+        System.setOut(new java.io.PrintStream(System.out, true, "UTF-8"));
+        String   sal         = "Z9xY";
+        String[] diccionario = {
+            "HOLA", "SISTEMAS", "COMPUTACION", "JAVA",
+            "PROGRAMACION", "CIENCIAS", "12345", "ADMIN", "SECRETO"
+        };
+
+        parte1(diccionario, sal);
+        parte2(diccionario, sal);
     }
 }
