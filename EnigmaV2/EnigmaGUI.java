@@ -18,6 +18,8 @@ public class EnigmaGUI extends JFrame {
     };
     private Map<Character, JButton> botonesTeclado;
     private Map<Character, Boolean> teclasPresionadas = new HashMap<>();
+    // Posición de los rotores al inicio. Se usa al exportar la config y al limpiar.
+    private String configInicialStr;
 
     public EnigmaGUI(MaquinaEnigma maquina) {
         this.maquina = maquina;
@@ -31,16 +33,13 @@ public class EnigmaGUI extends JFrame {
             }
         });
         setLayout(new BorderLayout(10, 10));
-
-        // Estilo general
         getContentPane().setBackground(new Color(240, 240, 240));
 
-        // --- Panel superior: Rotores ---
+        // Panel superior: ventanilla de los rotores
         JPanel panelRotores = new JPanel();
         panelRotores.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY),
                 "Rotores (Izquierdo, Central, Derecho)"));
         rotoresLabels = new JLabel[3];
-        // Visualmente mostramos Izquierdo (2), Central (1), Derecho (0)
         for (int i = 2; i >= 0; i--) {
             rotoresLabels[i] = new JLabel("A", SwingConstants.CENTER);
             rotoresLabels[i].setFont(new Font("Monospaced", Font.BOLD, 36));
@@ -51,15 +50,13 @@ public class EnigmaGUI extends JFrame {
             rotoresLabels[i].setOpaque(true);
             rotoresLabels[i].setBackground(Color.WHITE);
             panelRotores.add(rotoresLabels[i]);
-            if (i > 0)
-                panelRotores.add(Box.createRigidArea(new Dimension(30, 0)));
+            if (i > 0) panelRotores.add(Box.createRigidArea(new Dimension(30, 0)));
         }
 
-        // --- Panel central: Lightboard + Keyboard ---
+        // Panel central: tablero de lámparas + teclado
         JPanel panelCentral = new JPanel(new GridLayout(2, 1, 10, 10));
         panelCentral.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Lightboard
         JPanel panelLamparas = new JPanel();
         panelLamparas.setLayout(new BoxLayout(panelLamparas, BoxLayout.Y_AXIS));
         panelLamparas.setBorder(BorderFactory.createTitledBorder("Tablero de Lámparas (Lightboard)"));
@@ -81,7 +78,6 @@ public class EnigmaGUI extends JFrame {
             panelLamparas.add(filaPanel);
         }
 
-        // Teclado
         JPanel panelTeclado = new JPanel();
         panelTeclado.setLayout(new BoxLayout(panelTeclado, BoxLayout.Y_AXIS));
         panelTeclado.setBorder(BorderFactory.createTitledBorder("Teclado"));
@@ -96,17 +92,11 @@ public class EnigmaGUI extends JFrame {
                 boton.setFocusPainted(false);
                 botonesTeclado.put(c, boton);
 
-                // Eventos de ratón para mantener presionada la tecla
                 boton.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mousePressed(MouseEvent e) {
-                        procesarLetra(c);
-                    }
-
+                    public void mousePressed(MouseEvent e) { procesarLetra(c); }
                     @Override
-                    public void mouseReleased(MouseEvent e) {
-                        apagarLamparas();
-                    }
+                    public void mouseReleased(MouseEvent e) { apagarLamparas(); }
                 });
 
                 filaPanel.add(boton);
@@ -116,10 +106,9 @@ public class EnigmaGUI extends JFrame {
 
         panelCentral.add(panelLamparas);
         panelCentral.add(panelTeclado);
-
         configurarKeyBindings();
 
-        // --- Panel inferior: Áreas de texto ---
+        // Panel inferior: historial de texto
         JPanel panelTexto = new JPanel(new GridLayout(2, 1, 5, 5));
         panelTexto.setBorder(BorderFactory.createTitledBorder("Historial de Mensaje"));
 
@@ -140,27 +129,28 @@ public class EnigmaGUI extends JFrame {
         panelTexto.add(inputPanel);
         panelTexto.add(outputPanel);
 
-        // --- Panel de controles simples ---
+        // Controles
         JPanel panelControles = new JPanel(new FlowLayout());
-        JLabel lblDato = new JLabel("Dato Público (Clave):");
-        JTextField txtDatoPublico = new JTextField("GRUPO1", 10);
+        JLabel lblClave       = new JLabel("Clave pública:");
+        JTextField txtDatoPublico = new JTextField("465", 10);
         JButton btnExportarConfig = new JButton("Copiar Config Cifrada");
-        JButton btnGuardar = new JButton("Guardar Estado");
+        JButton btnGuardar        = new JButton("Guardar Estado");
+        JButton btnLimpiar        = new JButton("Limpiar");
 
-        panelControles.add(lblDato);
+        panelControles.add(lblClave);
         panelControles.add(txtDatoPublico);
         panelControles.add(btnExportarConfig);
         panelControles.add(btnGuardar);
+        panelControles.add(btnLimpiar);
 
+        // Exporta la config del INICIO (no la actual) para que quien la reciba pueda descifrar.
         btnExportarConfig.addActionListener(e -> {
             String clave = txtDatoPublico.getText();
             if (clave.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Ingresa un Dato Público (ej. GRUPO1) primero.");
+                JOptionPane.showMessageDialog(this, "Ingresa la clave pública (ej. 465) antes de copiar.");
                 return;
             }
-            String configRaw = maquina.getConfiguracionActual();
-            // Ciframos usando nuestra nueva clave súper sencilla
-            String cifrado = GestorCifradoSimple.cifrarConfiguracion(configRaw, clave);
+            String cifrado = GestorCifradoSimple.cifrarConfiguracion(configInicialStr, clave);
 
             JTextArea ta = new JTextArea(5, 30);
             ta.setText(cifrado);
@@ -168,14 +158,22 @@ public class EnigmaGUI extends JFrame {
             ta.setEditable(false);
 
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(cifrado), null);
-
-            JOptionPane.showMessageDialog(this, new JScrollPane(ta), "Configuración Cifrada copiada al portapapeles",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, new JScrollPane(ta),
+                    "Configuración cifrada — copiada al portapapeles", JOptionPane.INFORMATION_MESSAGE);
         });
 
         btnGuardar.addActionListener(e -> {
             MaquinaEnigma.guardarEstado(maquina);
             JOptionPane.showMessageDialog(this, "Estado guardado en estado_enigma.txt");
+        });
+
+        // Vuelve al inicio de sesión y borra el historial. Para descifrar: limpiar y escribir el cifrado.
+        btnLimpiar.addActionListener(e -> {
+            maquina.reiniciarA(configInicialStr);
+            inputArea.setText("");
+            outputArea.setText("");
+            apagarLamparas();
+            actualizarRotoresVisuales();
         });
 
         JPanel panelInferior = new JPanel(new BorderLayout());
@@ -189,28 +187,23 @@ public class EnigmaGUI extends JFrame {
         pack();
         setLocationRelativeTo(null);
         actualizarRotoresVisuales();
+
+        configInicialStr = maquina.getConfiguracionActual();
     }
 
     private void procesarLetra(char letra) {
         inputArea.append(String.valueOf(letra));
-
-        // Procesar en la máquina
         char resultado = maquina.procesarCaracter(letra);
-
         outputArea.append(String.valueOf(resultado));
-
-        // Actualizar UI
         actualizarRotoresVisuales();
         encenderLampara(resultado);
     }
 
     private void actualizarRotoresVisuales() {
         Rotor[] rotores = maquina.getRotores();
-        // rotores[2] es Izquierdo, rotores[1] Central, rotores[0] Derecho
         for (int i = 0; i < 3; i++) {
-            if (rotores[i] != null) {
+            if (rotores[i] != null)
                 rotoresLabels[i].setText(String.valueOf(rotores[i].getLetraVisible()));
-            }
         }
     }
 
@@ -235,23 +228,20 @@ public class EnigmaGUI extends JFrame {
 
         for (char c = 'A'; c <= 'Z'; c++) {
             final char letra = c;
-            String keyStrokePress = "pressed_" + letra;
+            String keyStrokePress   = "pressed_"  + letra;
             String keyStrokeRelease = "released_" + letra;
 
             im.put(KeyStroke.getKeyStroke(Character.toLowerCase(letra)), keyStrokePress);
             im.put(KeyStroke.getKeyStroke(letra), keyStrokePress);
 
+            // teclasPresionadas evita que mantener la tecla disparare la letra varias veces
             am.put(keyStrokePress, new AbstractAction() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (teclasPresionadas.getOrDefault(letra, false)) {
-                        return;
-                    }
+                    if (teclasPresionadas.getOrDefault(letra, false)) return;
                     teclasPresionadas.put(letra, true);
                     JButton btn = botonesTeclado.get(letra);
-                    if (btn != null) {
-                        btn.getModel().setPressed(true);
-                    }
+                    if (btn != null) btn.getModel().setPressed(true);
                     procesarLetra(letra);
                 }
             });
@@ -264,9 +254,7 @@ public class EnigmaGUI extends JFrame {
                 public void actionPerformed(ActionEvent e) {
                     teclasPresionadas.put(letra, false);
                     JButton btn = botonesTeclado.get(letra);
-                    if (btn != null) {
-                        btn.getModel().setPressed(false);
-                    }
+                    if (btn != null) btn.getModel().setPressed(false);
                     apagarLamparas();
                 }
             });
