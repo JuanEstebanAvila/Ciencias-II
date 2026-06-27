@@ -1,0 +1,85 @@
+package Lista_Incidencia;
+import java.util.*;
+
+public class ListaIncidencia implements GrafoUniversal{
+
+    private Map<Integer, List<Arista>> incidencia;
+    private List<Nodo> nodos;
+    private List<Arista> aristas;
+
+    public ListaIncidencia() {
+        incidencia       = new HashMap<>();
+        aristas  = new ArrayList<>();
+    }
+    
+    // ── Nodos ────────────────────────────────────────────────────
+
+    @Override
+    public void agregarNodo(Nodo nodo) {
+        if (obtenerNodo(nodo.id) == null) {
+            nodos.add(nodo);
+            incidencia.put(nodo.id, new ArrayList<>());
+        }
+    }
+
+    @Override
+    public Nodo obtenerNodo(int id) {
+        for (Nodo n : nodos)
+            if (n.id == id)
+                return n;
+        return null;
+    }
+
+    @Override
+    public List<Nodo> obtenerNodos() {
+        return nodos;
+    }
+
+    @Override
+    public int getCantidadNodos() {
+        return nodos.size();
+    }
+
+    // ── Aristas ──────────────────────────────────────────────────
+
+    // Cumple la interfaz → dirigida por defecto
+    @Override
+    public void agregarArista(Arista arista) {
+        agregarArista(arista, true);
+    }
+
+    // Sobrecarga con opción de dirección → NO es Override
+    public void agregarArista(Arista arista, boolean dirigida) {
+        if (obtenerNodo(arista.origen) == null || obtenerNodo(arista.destino) == null)
+            return;
+
+        aristas.add(arista);
+        incidencia.get(arista.origen).add(arista);
+
+        if (!dirigida)
+            incidencia.get(arista.destino).add(arista);
+    }
+
+    @Override
+    public List<Arista> obtenerAristas() {
+        return aristas;
+    }
+
+    @Override
+    public List<Arista> obtenerAristasDeNodo(Nodo nodo) {
+        return incidencia.getOrDefault(nodo.id, new ArrayList<>());
+    }
+
+    // Adyacentes a través de las aristas ← incidencia
+    @Override
+    public List<Nodo> obtenerAdyacentes(Nodo nodo) {
+        List<Nodo> adyacentes = new ArrayList<>();
+        for (Arista a : incidencia.getOrDefault(nodo.id, new ArrayList<>())) {
+            Nodo vecino = obtenerNodo(a.destino);
+            if (vecino != null)
+                adyacentes.add(vecino);
+        }
+        return adyacentes;
+    }
+
+}
